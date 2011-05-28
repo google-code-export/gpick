@@ -433,11 +433,6 @@ static void update(GtkWidget *widget, PaletteFromImageArgs *args ){
 	calc(args, true, 100);
 }
 
-
-static gchar* format_threshold_value_cb(GtkScale *scale, gdouble value){
-	return g_strdup_printf("%0.01f%%", value);
-}
-
 static void destroy_cb(GtkWidget* widget, PaletteFromImageArgs *args){
 
 	if (args->previuos_node) node_delete(args->previuos_node);
@@ -595,7 +590,7 @@ void tools_palette_from_image_show(GtkWindow* parent, GlobalState* gs){
 	args->preview_color_list = preview_color_list;
 
 	gtk_widget_show_all(table_m);
-	gtk_container_add(GTK_CONTAINER(GTK_DIALOG(dialog)->vbox), table_m);
+	gtk_container_add(GTK_CONTAINER(gtk_dialog_get_content_area(GTK_DIALOG(dialog))), table_m);
 
 	g_signal_connect(G_OBJECT(dialog), "destroy", G_CALLBACK(destroy_cb), args);
 	g_signal_connect(G_OBJECT(dialog), "response", G_CALLBACK(response_cb), args);

@@ -140,9 +140,9 @@ static gboolean on_window_state_event(GtkWidget *widget, GdkEventWindowState *ev
 
 static gboolean on_window_configure(GtkWidget *widget, GdkEventConfigure *event, AppArgs *args){
 
-	if (GTK_WIDGET_VISIBLE(widget)){
+	if (gtk_widget_get_visible(widget)){
 
-		if (gdk_window_get_state(widget->window) & (GDK_WINDOW_STATE_MAXIMIZED | GDK_WINDOW_STATE_FULLSCREEN | GDK_WINDOW_STATE_ICONIFIED)) {
+		if (gdk_window_get_state(gtk_widget_get_window(widget)) & (GDK_WINDOW_STATE_MAXIMIZED | GDK_WINDOW_STATE_FULLSCREEN | GDK_WINDOW_STATE_ICONIFIED)) {
 			return false;
 		}
 
@@ -164,7 +164,7 @@ static gboolean on_window_configure(GtkWidget *widget, GdkEventConfigure *event,
 	return false;
 }
 
-static void notebook_switch_cb(GtkNotebook *notebook, GtkNotebookPage *page, guint page_num, AppArgs *args){
+static void notebook_switch_cb(GtkNotebook *notebook, GtkNotebookTab *tab, guint page_num, AppArgs *args){
 	if (args->current_color_source) color_source_deactivate(args->current_color_source);
 	args->current_color_source = NULL;
 
@@ -178,7 +178,7 @@ static void notebook_switch_cb(GtkNotebook *notebook, GtkNotebookPage *page, gui
 }
 
 static void destroy_cb(GtkWidget *widget, AppArgs *args){
-	g_signal_handlers_disconnect_matched(G_OBJECT(args->notebook), G_SIGNAL_MATCH_FUNC, 0, NULL, NULL, (void*)notebook_switch_cb, 0);       //disconnect notebook switch callback, because destroying child widgets triggers it
+	g_signal_handlers_disconnect_matched(G_OBJECT(args->notebook), G_SIGNAL_MATCH_FUNC, 0, 0, NULL, (void*)notebook_switch_cb, 0);       //disconnect notebook switch callback, because destroying child widgets triggers it
 
 	//dynv_set_int32(args->params, "notebook_page", gtk_notebook_get_current_page(GTK_NOTEBOOK(args->notebook)));
 	dynv_set_string(args->params, "color_source", args->color_source_index[gtk_notebook_get_current_page(GTK_NOTEBOOK(args->notebook))]->identificator);
@@ -609,7 +609,7 @@ static void menu_file_activate(GtkWidget *widget, gpointer data) {
 		for (list<string>::iterator i = args->recent_files.begin(); i != args->recent_files.end(); i++){
 			item = gtk_menu_item_new_with_label ((*i).c_str());
 			gtk_menu_shell_append (GTK_MENU_SHELL (menu2), item);
-			g_object_set_data_full(G_OBJECT(item), "index", (void*)j, (GDestroyNotify)NULL);
+			g_object_set_data_full(G_OBJECT(item), "index", (void*)(uintptr_t)j, (GDestroyNotify)NULL);
 			g_signal_connect (G_OBJECT (item), "activate", G_CALLBACK (menu_file_open_nth), args);
 			j++;
 		}
@@ -1017,7 +1017,7 @@ static gboolean on_palette_list_key_press(GtkWidget *widget, GdkEventKey *event,
 
 	switch(event->keyval)
 	{
-		case GDK_c:
+		case GDK_KEY_c:
 			if ((event->state&modifiers)==GDK_CONTROL_MASK){
 
 				Converters *converters = (Converters*)dynv_get_pointer_wd(args->gs->params, "Converters", 0);
@@ -1031,7 +1031,7 @@ static gboolean on_palette_list_key_press(GtkWidget *widget, GdkEventKey *event,
 			return false;
 			break;
 
-		case GDK_v:
+		case GDK_KEY_v:
 			if ((event->state&modifiers)==GDK_CONTROL_MASK){
 				struct ColorObject* color_object;
 				if (copypaste_get_color_object(&color_object, args->gs)==0){
@@ -1085,7 +1085,7 @@ static int color_list_on_get_positions(struct ColorList* color_list){
 
 int main_show_window(GtkWidget* window, struct dynvSystem *main_params){
 
-	if (GTK_WIDGET_VISIBLE(window)){
+	if (gtk_widget_get_visible(window)){
 		gtk_window_deiconify(GTK_WINDOW(window));
 		return -1;	//already visible
 	}
@@ -1334,7 +1334,7 @@ AppArgs* app_create_main(){
 
 		file_item = gtk_menu_item_new_with_mnemonic("_View");
 		gtk_menu_item_set_submenu(GTK_MENU_ITEM(file_item), GTK_WIDGET(menu));
-		gtk_menu_bar_append(GTK_MENU_BAR(menubar), file_item);
+		gtk_menu_shell_append(GTK_MENU_SHELL(menubar), file_item);
 
 		gtk_box_pack_start(GTK_BOX(widget), menubar, false, true, 0);
 
@@ -1399,7 +1399,7 @@ AppArgs* app_create_main(){
 	GtkWidget *button = gtk_button_new();
 	gtk_button_set_focus_on_click(GTK_BUTTON(button), false);
 	g_signal_connect(G_OBJECT(button), "clicked", G_CALLBACK(floating_picker_show_cb), args);
-	gtk_widget_add_accelerator(button, "clicked", accel_group, GDK_p, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
+	gtk_widget_add_accelerator(button, "clicked", accel_group, GDK_KEY_p, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
 	gtk_widget_set_tooltip_text(button, "Pick colors (Ctrl+P)");
 	gtk_container_add(GTK_CONTAINER(button), gtk_image_new_from_icon_name("gpick", GTK_ICON_SIZE_MENU));
 	gtk_box_pack_end(GTK_BOX(statusbar), button, false, false, 0);
@@ -1413,7 +1413,7 @@ AppArgs* app_create_main(){
 		char** recent_array;
 		uint32_t recent_array_size;
 		if ((recent_array = (char**)dynv_get_string_array_wd(args->gs->params, "gpick.recent.files", 0, 0, &recent_array_size))){
-			for (int i = 0; i < recent_array_size; i++){
+			for (uint32_t i = 0; i < recent_array_size; i++){
 				args->recent_files.push_back(string(recent_array[i]));
 			}
 			delete [] recent_array;

@@ -115,7 +115,7 @@ static gboolean updateMainColor( gpointer data ){
 	gtk_zoomed_get_screen_rect(GTK_ZOOMED(args->zoomed_display), pointer, window_size, &zoomed_rect);
 	screen_reader_add_rect(args->gs->screen_reader, screen, zoomed_rect);
 
-	screen_reader_update_pixbuf(args->gs->screen_reader, &final_rect);
+	screen_reader_update_surface(args->gs->screen_reader, &final_rect);
 
 	Vec2<int> offset;
 
@@ -132,7 +132,7 @@ static gboolean updateMainColor( gpointer data ){
 
 
 	offset = Vec2<int>(zoomed_rect.getX()-final_rect.getX(), zoomed_rect.getY()-final_rect.getY());
-	gtk_zoomed_update(GTK_ZOOMED(args->zoomed_display), pointer, window_size, offset, screen_reader_get_pixbuf(args->gs->screen_reader));
+	gtk_zoomed_update(GTK_ZOOMED(args->zoomed_display), pointer, window_size, offset, screen_reader_get_surface(args->gs->screen_reader));
 
 	return TRUE;
 }
@@ -390,7 +390,7 @@ static gboolean on_key_up (GtkWidget *widget, GdkEventKey *event, gpointer data)
 
 	switch(event->keyval)
 	{
-		case GDK_c:
+		case GDK_KEY_c:
 			if ((event->state&modifiers)==GDK_CONTROL_MASK){
 
 				Color c;
@@ -412,59 +412,57 @@ static gboolean on_key_up (GtkWidget *widget, GdkEventKey *event, gpointer data)
 			return FALSE;
 			break;
 
-		case GDK_1:
+		case GDK_KEY_1:
 			gtk_swatch_set_active_index(GTK_SWATCH(args->swatch_display), 1);
 			updateDiplays(args, widget);
 			return TRUE;
 			break;
 
-		case GDK_2:
+		case GDK_KEY_2:
 			gtk_swatch_set_active_index(GTK_SWATCH(args->swatch_display), 2);
 			updateDiplays(args, widget);
 			return TRUE;
 			break;
 
-		case GDK_3:
+		case GDK_KEY_3:
 			gtk_swatch_set_active_index(GTK_SWATCH(args->swatch_display), 3);
 			updateDiplays(args, widget);
 			return TRUE;
 			break;
 
-		case GDK_4:
+		case GDK_KEY_4:
 			gtk_swatch_set_active_index(GTK_SWATCH(args->swatch_display), 4);
 			updateDiplays(args, widget);
 			return TRUE;
 			break;
 
-		case GDK_5:
+		case GDK_KEY_5:
 			gtk_swatch_set_active_index(GTK_SWATCH(args->swatch_display), 5);
 			updateDiplays(args, widget);
 			return TRUE;
 			break;
 
-		case GDK_6:
+		case GDK_KEY_6:
 			gtk_swatch_set_active_index(GTK_SWATCH(args->swatch_display), 6);
 			updateDiplays(args, widget);
 			return TRUE;
 			break;
 
-		case GDK_Right:
+		case GDK_KEY_Right:
 			gtk_swatch_move_active(GTK_SWATCH(args->swatch_display),1);
 			updateDiplays(args, widget);
 			return TRUE;
 			break;
 
-		case GDK_Left:
+		case GDK_KEY_Left:
 			gtk_swatch_move_active(GTK_SWATCH(args->swatch_display),-1);
 			updateDiplays(args, widget);
 			return TRUE;
 			break;
 
-		case GDK_space:
+		case GDK_KEY_space:
 			updateMainColor(args);
 			gtk_swatch_set_color_to_main(GTK_SWATCH(args->swatch_display));
-
-
 
 			if (dynv_get_bool_wd(args->params, "sampler.add_to_palette", true)){
 				Color c;

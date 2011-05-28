@@ -500,8 +500,8 @@ static gboolean on_color_key_press (GtkWidget *widget, GdkEventKey *event, Gener
 	GtkWidget* color_widget = widget;
 
 	switch(event->keyval){
-		case GDK_c:
-			if ((event->state&modifiers)==GDK_CONTROL_MASK){
+		case GDK_KEY_c:
+			if ((event->state & modifiers) == GDK_CONTROL_MASK){
 
 				gtk_color_get_color(GTK_COLOR(color_widget), &c);
 				color_object = color_list_new_color_object(args->gs->colors, &c);
@@ -519,8 +519,8 @@ static gboolean on_color_key_press (GtkWidget *widget, GdkEventKey *event, Gener
 			return false;
 			break;
 
-		case GDK_v:
-			if ((event->state&modifiers)==GDK_CONTROL_MASK){
+		case GDK_KEY_v:
+			if ((event->state & modifiers) == GDK_CONTROL_MASK){
 				if (copypaste_get_color_object(&color_object, args->gs)==0){
 					set_rgb_color_by_widget(args, color_object, color_widget);
 					color_object_release(color_object);
@@ -779,7 +779,7 @@ static ColorSource* source_implement(ColorSource *source, GlobalState *gs, struc
 		gtk_drag_dest_set( widget, GtkDestDefaults(GTK_DEST_DEFAULT_MOTION | GTK_DEST_DEFAULT_HIGHLIGHT), 0, 0, GDK_ACTION_COPY);
 		gtk_drag_source_set( widget, GDK_BUTTON1_MASK, 0, 0, GDK_ACTION_COPY);
 		dd.handler_map = dynv_system_get_handler_map(gs->colors->params);
-		dd.userdata2 = (void*)i;
+		dd.userdata2 = (void*)(uintptr_t)i;
 		dragdrop_widget_attach(widget, DragDropFlags(DRAGDROP_SOURCE | DRAGDROP_DESTINATION), &dd);
 	}
 
@@ -835,9 +835,9 @@ static ColorSource* source_implement(ColorSource *source, GlobalState *gs, struc
 
 	//table_y=0;
 	gtk_table_attach(GTK_TABLE(table), gtk_label_aligned_new("Type:",0,0.5,0,0),0,1,table_y,table_y+1, GTK_FILL, GTK_SHRINK, 5, 5);
-	args->gen_type = gtk_combo_box_new_text();
+	args->gen_type = gtk_combo_box_text_new();
 	for (uint32_t i=0; i<sizeof(scheme_types)/sizeof(SchemeType); i++){
-		gtk_combo_box_append_text(GTK_COMBO_BOX(args->gen_type), scheme_types[i].name);
+		gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(args->gen_type), scheme_types[i].name);
 	}
 	gtk_combo_box_set_active(GTK_COMBO_BOX(args->gen_type), dynv_get_int32_wd(args->params, "type", 0));
 	g_signal_connect (G_OBJECT (args->gen_type), "changed", G_CALLBACK(update), args);
@@ -845,10 +845,10 @@ static ColorSource* source_implement(ColorSource *source, GlobalState *gs, struc
     table_y++;
 
 	gtk_table_attach(GTK_TABLE(table), gtk_label_aligned_new("Color wheel:",0,0.5,0,0),0,1,table_y,table_y+1, GTK_FILL, GTK_SHRINK, 5, 5);
-	args->wheel_type = gtk_combo_box_new_text();
+	args->wheel_type = gtk_combo_box_text_new();
 
 	for (uint32_t i = 0; i < color_wheel_types_get_n(); i++){
-		gtk_combo_box_append_text(GTK_COMBO_BOX(args->wheel_type), color_wheel_types_get()[i].name);
+		gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(args->wheel_type), color_wheel_types_get()[i].name);
 	}
 	gtk_combo_box_set_active(GTK_COMBO_BOX(args->wheel_type), dynv_get_int32_wd(args->params, "wheel_type", 0));
 	g_signal_connect (G_OBJECT (args->wheel_type), "changed", G_CALLBACK(update), args);

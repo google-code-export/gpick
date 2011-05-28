@@ -32,7 +32,7 @@ using namespace std;
 G_DEFINE_TYPE (GtkColorWheel, gtk_color_wheel, GTK_TYPE_DRAWING_AREA);
 static GtkWindowClass *parent_class = NULL;
 
-static gboolean gtk_color_wheel_expose(GtkWidget *color_wheel, GdkEventExpose *event);
+static gboolean gtk_color_wheel_draw (GtkWidget *widget, cairo_t *cr);
 static gboolean gtk_color_wheel_button_release(GtkWidget *color_wheel, GdkEventButton *event);
 static gboolean gtk_color_wheel_button_press(GtkWidget *color_wheel, GdkEventButton *event);
 static gboolean gtk_color_wheel_motion_notify(GtkWidget *widget, GdkEventMotion *event);
@@ -94,7 +94,7 @@ static void gtk_color_wheel_class_init(GtkColorWheelClass *color_wheel_class) {
 
 	/* GtkWidget signals */
 
-	widget_class->expose_event = gtk_color_wheel_expose;
+	widget_class->draw = gtk_color_wheel_draw;
 	widget_class->button_release_event = gtk_color_wheel_button_release;
 	widget_class->button_press_event = gtk_color_wheel_button_press;
 
@@ -118,13 +118,12 @@ GtkWidget* gtk_color_wheel_new(){
 	GtkWidget* widget = (GtkWidget*) g_object_new(GTK_TYPE_COLOR_WHEEL, NULL);
 	GtkColorWheelPrivate *ns = GTK_COLOR_WHEEL_GET_PRIVATE(widget);
 
-
 	ns->active_color = 1;
 	ns->radius = 80;
 	ns->circle_width = 14;
 	ns->block_size = 2 * (ns->radius - ns->circle_width) * sin(M_PI / 4) - 8;
 
-	gtk_widget_set_size_request(GTK_WIDGET(widget), ns->radius * 2 + widget->style->xthickness*2, ns->radius * 2 + widget->style->ythickness*2);
+	gtk_widget_set_size_request(GTK_WIDGET(widget), ns->radius * 2, ns->radius * 2);
 	ns->n_cpoint = 0;
 	ns->grab_active = 0;
 	ns->grab_block = false;
@@ -134,7 +133,7 @@ GtkWidget* gtk_color_wheel_new(){
 	ns->color_wheel_type = &color_wheel_types_get()[0];
 	ns->cache_color_wheel = 0;
 
-	GTK_WIDGET_SET_FLAGS(widget, GTK_CAN_FOCUS);
+	gtk_widget_set_can_focus(widget, true);
 	return widget;
 }
 
@@ -299,7 +298,7 @@ static void draw_wheel(GtkColorWheelPrivate *ns, cairo_t *cr, double radius, dou
 	double inner_radius = radius - width;
 
 	if (ns->cache_color_wheel){
-        surface = ns->cache_color_wheel;
+		surface = ns->cache_color_wheel;
 	}else{
 		surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, ceil(radius * 2), ceil(radius * 2));
 		if (cairo_surface_status(surface) != CAIRO_STATUS_SUCCESS){
@@ -352,6 +351,8 @@ static void draw_wheel(GtkColorWheelPrivate *ns, cairo_t *cr, double radius, dou
 	cairo_save(cr);
 
 	cairo_set_source_surface(cr, surface, 0, 0);
+	cairo_pattern_set_filter(cairo_get_source(cr), CAIRO_FILTER_NEAREST);
+
 	//cairo_surface_destroy(surface);
 
 	cairo_set_line_width(cr, width);
@@ -409,9 +410,11 @@ int gtk_color_wheel_get_at(GtkColorWheel *color_wheel, int x, int y){
 static gboolean gtk_color_wheel_motion_notify(GtkWidget *widget, GdkEventMotion *event){
 	GtkColorWheelPrivate *ns = GTK_COLOR_WHEEL_GET_PRIVATE(widget);
 
-    if (ns->grab_active){
-		double dx = -((event->x - widget->style->xthickness) - ns->radius);
-		double dy = (event->y - widget->style->ythickness) - ns->radius;
+	GtkStyleContext *style = gtk_widget_get_style_context(widget);
+
+  if (ns->grab_active){
+		double dx = -((event->x /*- style->xthickness*/) - ns->radius);
+		double dy = (event->y /*- style->ythickness*/) - ns->radius;
 
 		double angle = atan2(dx, dy) + M_PI;
 
@@ -424,8 +427,8 @@ static gboolean gtk_color_wheel_motion_notify(GtkWidget *widget, GdkEventMotion 
 		return true;
 	}else if (ns->grab_block){
 
-		double dx = (event->x - widget->style->xthickness) - ns->radius + ns->block_size / 2;
-		double dy = (event->y - widget->style->ythickness) - ns->radius + ns->block_size / 2;
+		double dx = (event->x /*- style->xthickness*/) - ns->radius + ns->block_size / 2;
+		double dy = (event->y /*- style->ythickness*/) - ns->radius + ns->block_size / 2;
 
 		ns->selected->saturation = clamp_float(dx / ns->block_size, 0, 1);
 		ns->selected->lightness = clamp_float(dy / ns->block_size, 0, 1);
@@ -447,16 +450,14 @@ static gboolean gtk_color_wheel_motion_notify(GtkWidget *widget, GdkEventMotion 
 	return false;
 }
 
-static gboolean gtk_color_wheel_expose(GtkWidget *widget, GdkEventExpose *event){
-
+static gboolean gtk_color_wheel_draw (GtkWidget *widget, cairo_t *cr)
+{
 	GtkStateType state;
 
-	if (GTK_WIDGET_HAS_FOCUS (widget))
+	if (gtk_widget_get_can_focus(widget))
 		state = GTK_STATE_SELECTED;
 	else
 		state = GTK_STATE_ACTIVE;
-
-	cairo_t *cr;
 
 	GtkColorWheelPrivate *ns = GTK_COLOR_WHEEL_GET_PRIVATE(widget);
 
@@ -464,12 +465,8 @@ static gboolean gtk_color_wheel_expose(GtkWidget *widget, GdkEventExpose *event)
 		gtk_paint_focus(widget->style, widget->window, state, &event->area, widget, 0, widget->style->xthickness, widget->style->ythickness, 150, 150);
 	}*/
 
-	cr = gdk_cairo_create(widget->window);
-
-	cairo_rectangle(cr, event->area.x, event->area.y, event->area.width, event->area.height);
-	cairo_clip(cr);
-
-	cairo_translate(cr, widget->style->xthickness + 0.5, widget->style->ythickness + 0.5);
+	GtkStyleContext *style = gtk_widget_get_style_context(widget);
+	//cairo_translate(cr, style->xthickness + 0.5, style->ythickness + 0.5);
 
 	draw_wheel(ns, cr, ns->radius, ns->circle_width, ns->color_wheel_type);
 
@@ -489,8 +486,6 @@ static gboolean gtk_color_wheel_expose(GtkWidget *widget, GdkEventExpose *event)
 		draw_dot(cr, ns->radius + (ns->radius - ns->circle_width / 2) * sin(ns->cpoint[i].hue * M_PI * 2), ns->radius - (ns->radius - ns->circle_width / 2) * cos(ns->cpoint[i].hue * M_PI * 2), (&ns->cpoint[i] == ns->selected) ? 7 : 4);
 	}
 
-	cairo_destroy(cr);
-
 	return FALSE;
 }
 
@@ -498,8 +493,8 @@ static gboolean gtk_color_wheel_expose(GtkWidget *widget, GdkEventExpose *event)
 static gboolean gtk_color_wheel_button_press(GtkWidget *widget, GdkEventButton *event) {
 	GtkColorWheelPrivate *ns = GTK_COLOR_WHEEL_GET_PRIVATE(widget);
 
-	gint x = event->x - widget->style->xthickness;
-	gint y = event->y - widget->style->ythickness;
+	gint x = event->x /*- widget->style->xthickness*/;
+	gint y = event->y /*- widget->style->ythickness*/;
 
 	gtk_widget_grab_focus(widget);
 
@@ -512,7 +507,7 @@ static gboolean gtk_color_wheel_button_press(GtkWidget *widget, GdkEventButton *
 
 				GdkCursor *cursor = gdk_cursor_new(GDK_CROSS);
 				gdk_pointer_grab(gtk_widget_get_window(widget), false, GdkEventMask(GDK_POINTER_MOTION_MASK | GDK_BUTTON_RELEASE_MASK), NULL, cursor, GDK_CURRENT_TIME);
-				gdk_cursor_destroy(cursor);
+				gdk_cursor_unref(cursor);
 				return true;
 			}
 		}
@@ -524,7 +519,7 @@ static gboolean gtk_color_wheel_button_press(GtkWidget *widget, GdkEventButton *
 
 			GdkCursor *cursor = gdk_cursor_new(GDK_CROSS);
 			gdk_pointer_grab(gtk_widget_get_window(widget), false, GdkEventMask(GDK_POINTER_MOTION_MASK | GDK_BUTTON_RELEASE_MASK), NULL, cursor, GDK_CURRENT_TIME);
-			gdk_cursor_destroy(cursor);
+			gdk_cursor_unref(cursor);
 			return true;
 		}
 	}

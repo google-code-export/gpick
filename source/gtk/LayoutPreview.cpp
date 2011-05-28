@@ -30,7 +30,7 @@ using namespace layout;
 
 G_DEFINE_TYPE (GtkLayoutPreview, gtk_layout_preview, GTK_TYPE_DRAWING_AREA);
 
-static gboolean gtk_layout_preview_expose(GtkWidget *layout_preview, GdkEventExpose *event);
+static gboolean gtk_layout_preview_draw(GtkWidget *layout_preview, cairo_t *cr);
 static gboolean gtk_layout_preview_button_release(GtkWidget *layout_preview, GdkEventButton *event);
 static gboolean gtk_layout_preview_button_press(GtkWidget *layout_preview, GdkEventButton *event);
 
@@ -62,7 +62,7 @@ static void gtk_layout_preview_class_init(GtkLayoutPreviewClass *klass){
 
 	/* GtkWidget signals */
 
-	widget_class->expose_event = gtk_layout_preview_expose;
+	widget_class->draw = gtk_layout_preview_draw;
 	widget_class->button_release_event = gtk_layout_preview_button_release;
 	widget_class->button_press_event = gtk_layout_preview_button_press;
 
@@ -91,7 +91,7 @@ GtkWidget* gtk_layout_preview_new(void){
 
 	g_signal_connect(G_OBJECT(widget), "destroy", G_CALLBACK (gtk_layout_preview_destroy), NULL);
 
-	GTK_WIDGET_SET_FLAGS(widget, GTK_CAN_FOCUS);
+	gtk_widget_set_can_focus(widget, true);
 	return widget;
 }
 
@@ -118,22 +118,13 @@ static bool set_selected_box(GtkLayoutPreviewPrivate *ns, Box* box){
 	return changed;
 }
 
-static gboolean gtk_layout_preview_expose(GtkWidget *widget, GdkEventExpose *event){
+static gboolean gtk_layout_preview_draw(GtkWidget *widget, cairo_t *cr){
 	GtkLayoutPreviewPrivate *ns = GTK_LAYOUT_PREVEW_GET_PRIVATE(widget);
-
-	cairo_t *cr;
-	cr = gdk_cairo_create(widget->window);
-
-	cairo_rectangle(cr, event->area.x, event->area.y, event->area.width, event->area.height);
-	cairo_clip(cr);
-
 
 	if (ns->system && ns->system->box){
 		ns->area = Rect2<float>(0, 0, 1, 1);
 		ns->system->box->Draw(cr, ns->area);
 	}
-
-	cairo_destroy(cr);
 
 	return true;
 }

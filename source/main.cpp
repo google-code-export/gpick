@@ -23,6 +23,7 @@
 #include "uiApp.h"
 
 #include <gtk/gtk.h>
+#include <locale.h>
 
 static gchar **commandline_filename=NULL;
 static gchar *commandline_geometry=NULL;
@@ -35,7 +36,7 @@ static GOptionEntry commandline_entries[] =
 
 int main(int argc, char **argv){
 
-	gtk_set_locale();
+	setlocale (LC_ALL, "");
 	gtk_init(&argc, &argv);
 	g_set_application_name(program_name);
 

@@ -59,7 +59,7 @@ int dialog_color_input_show(GtkWindow* parent, GlobalState* gs, struct ColorObje
 	}
 
 	gtk_widget_show_all(vbox);
-	gtk_container_add(GTK_CONTAINER(GTK_DIALOG(dialog)->vbox), vbox);
+	gtk_container_add(GTK_CONTAINER(gtk_dialog_get_content_area(GTK_DIALOG(dialog))), vbox);
 
 	if (gtk_dialog_run(GTK_DIALOG(dialog)) == GTK_RESPONSE_OK) {
 

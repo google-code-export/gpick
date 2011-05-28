@@ -33,7 +33,7 @@ G_DEFINE_TYPE (GtkColorComponent, gtk_color_component, GTK_TYPE_DRAWING_AREA);
 
 typedef struct GtkColorComponentPrivate GtkColorComponentPrivate;
 
-static gboolean gtk_color_component_expose (GtkWidget *widget, GdkEventExpose *event);
+static gboolean gtk_color_component_draw (GtkWidget *widget, cairo_t *cr);
 static gboolean gtk_color_component_button_release (GtkWidget *widget, GdkEventButton *event);
 static gboolean gtk_color_component_button_press (GtkWidget *node_system, GdkEventButton *event);
 static gboolean gtk_color_component_motion_notify (GtkWidget *node_system, GdkEventMotion *event);
@@ -67,7 +67,7 @@ static void gtk_color_component_class_init (GtkColorComponentClass *color_compon
 
 	/* GtkWidget signals */
 
-	widget_class->expose_event = gtk_color_component_expose;
+	widget_class->draw = gtk_color_component_draw;
 	widget_class->button_release_event = gtk_color_component_button_release;
 	widget_class->button_press_event = gtk_color_component_button_press;
 	widget_class->motion_notify_event = gtk_color_component_motion_notify;
@@ -199,18 +199,13 @@ void gtk_color_component_set_color(GtkColorComponent* color_component, Color* co
 
 static void interpolate_colors(Color *color1, Color *color2, float position, Color *result){
 	result->rgb.red = color1->rgb.red * (1 - position) + color2->rgb.red * position;
-	result->rgb.green= color1->rgb.green * (1 - position) + color2->rgb.green * position;
+	result->rgb.green = color1->rgb.green * (1 - position) + color2->rgb.green * position;
 	result->rgb.blue = color1->rgb.blue * (1 - position) + color2->rgb.blue * position;
 }
 
-static gboolean gtk_color_component_expose (GtkWidget *widget, GdkEventExpose *event){
-	cairo_t *cr;
-
+static gboolean gtk_color_component_draw (GtkWidget *widget, cairo_t *cr)
+{
 	GtkColorComponentPrivate *ns = GTK_COLOR_COMPONENT_GET_PRIVATE(widget);
-
-	cr = gdk_cairo_create (widget->window);
-	cairo_rectangle(cr, event->area.x, event->area.y, event->area.width, event->area.height);
-	cairo_clip(cr);
 
 	Color c[4];
 	Color c2[4];
@@ -459,6 +454,7 @@ static gboolean gtk_color_component_expose (GtkWidget *widget, GdkEventExpose *e
 	cairo_save(cr);
 
 	cairo_set_source_surface(cr, surface, 0, 0);
+	cairo_pattern_set_filter(cairo_get_source(cr), CAIRO_FILTER_NEAREST);
 	cairo_surface_destroy(surface);
 
 	for (i = 0; i < ns->n_components; ++i){
@@ -478,8 +474,6 @@ static gboolean gtk_color_component_expose (GtkWidget *widget, GdkEventExpose *e
 		cairo_set_line_width(cr, 1);
 		cairo_stroke(cr);
 	}
-
-	cairo_destroy (cr);
 
 	return TRUE;
 }

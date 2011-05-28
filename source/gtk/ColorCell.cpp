@@ -20,26 +20,13 @@
 #include "../ColorObject.h"
 
 static void custom_cell_renderer_color_init(CustomCellRendererColor *cellcolor);
-
 static void custom_cell_renderer_color_class_init(CustomCellRendererColorClass *klass);
-
 static void custom_cell_renderer_color_get_property(GObject *object, guint param_id, GValue *value, GParamSpec *pspec);
-
 static void custom_cell_renderer_color_set_property(GObject *object, guint param_id, const GValue *value, GParamSpec *pspec);
-
 static void custom_cell_renderer_color_finalize(GObject *gobject);
-
-static void custom_cell_renderer_color_get_size(GtkCellRenderer *cell, GtkWidget *widget, GdkRectangle *cell_area, gint *x_offset, gint *y_offset, gint *width,
-		gint *height);
-
-static void custom_cell_renderer_color_render     (GtkCellRenderer            *cell,
-							 GdkDrawable                *window,
-							 GtkWidget                  *widget,
-							 GdkRectangle               *background_area,
-							 GdkRectangle               *cell_area,
-							 GdkRectangle               *expose_area,
-							 GtkCellRendererState        flags);
-
+static void custom_cell_renderer_get_preferred_width(GtkCellRenderer *cell, GtkWidget *widget, gint *minimum_size, gint *natural_size);
+static void custom_cell_renderer_get_preferred_height(GtkCellRenderer *cell, GtkWidget *widget, gint *minimum_size, gint *natural_size);
+static void custom_cell_renderer_color_render(GtkCellRenderer *cell, cairo_t *cr, GtkWidget *widget, const GdkRectangle *background_area, const GdkRectangle *cell_area, GtkCellRendererState flags);
 
 enum
 {
@@ -66,12 +53,13 @@ GType custom_cell_renderer_color_get_type(void) {
 }
 
 static void custom_cell_renderer_color_init(CustomCellRendererColor *cellrenderercolor) {
-	GTK_CELL_RENDERER(cellrenderercolor)->mode = GTK_CELL_RENDERER_MODE_INERT;
+/*	GTK_CELL_RENDERER(cellrenderercolor)->mode = GTK_CELL_RENDERER_MODE_INERT;
 	GTK_CELL_RENDERER(cellrenderercolor)->xpad = 2;
-	GTK_CELL_RENDERER(cellrenderercolor)->ypad = 2;
-	cellrenderercolor->width=32;
-	cellrenderercolor->height=16;
-	cellrenderercolor->color=0;
+	GTK_CELL_RENDERER(cellrenderercolor)->ypad = 2;*/
+
+	cellrenderercolor->width = 32;
+	cellrenderercolor->height = 16;
+	cellrenderercolor->color = 0;
 }
 
 static void custom_cell_renderer_color_class_init(CustomCellRendererColorClass *klass) {
@@ -84,7 +72,8 @@ static void custom_cell_renderer_color_class_init(CustomCellRendererColorClass *
 	object_class->get_property = custom_cell_renderer_color_get_property;
 	object_class->set_property = custom_cell_renderer_color_set_property;
 
-	cell_class->get_size = custom_cell_renderer_color_get_size;
+	cell_class->get_preferred_width = custom_cell_renderer_get_preferred_width;
+	cell_class->get_preferred_height = custom_cell_renderer_get_preferred_height;
 	cell_class->render = custom_cell_renderer_color_render;
 
 	g_object_class_install_property(object_class, PROP_COLOR, g_param_spec_pointer("color", "Color", "ColorObject pointer", (GParamFlags) G_PARAM_READWRITE));
@@ -134,82 +123,26 @@ void custom_cell_renderer_color_set_size(GtkCellRenderer *cell,  gint width, gin
 	cellcolor->height=height;
 }
 
-static void custom_cell_renderer_color_get_size(GtkCellRenderer *cell, GtkWidget *widget, GdkRectangle *cell_area, gint *x_offset, gint *y_offset, gint *width,
-		gint *height) {
-	CustomCellRendererColor *cellcolor=CUSTOM_CELL_RENDERER_COLOR(cell);
-
-	gint calc_width;
-	gint calc_height;
-
-	calc_width = (gint) cell->xpad * 2 + cellcolor->width;
-	calc_height = (gint) cell->ypad * 2 + cellcolor->height;
-
-	if (width)
-		*width = calc_width;
-
-	if (height)
-		*height = calc_height;
-
-	if (cell_area){
-		if (x_offset){
-			*x_offset = gint(cell->xalign * (cell_area->width - calc_width));
-			*x_offset = MAX(*x_offset, 0);
-		}
-
-		if (y_offset){
-			*y_offset = gint(cell->yalign * (cell_area->height - calc_height));
-			*y_offset = MAX(*y_offset, 0);
-		}
-	}
+static void custom_cell_renderer_get_preferred_width(GtkCellRenderer *cell, GtkWidget *widget, gint *minimum_size, gint *natural_size)
+{
+	CustomCellRendererColor *cellcolor = CUSTOM_CELL_RENDERER_COLOR (cell);
+	*minimum_size = 1;
+	*natural_size = cellcolor->width;
 }
 
-
-static void custom_cell_renderer_color_render(GtkCellRenderer *cell, GdkDrawable *window, GtkWidget *widget, GdkRectangle *background_area,
-		GdkRectangle *cell_area, GdkRectangle *expose_area, GtkCellRendererState flags) {
-
+static void custom_cell_renderer_get_preferred_height(GtkCellRenderer *cell, GtkWidget *widget, gint *minimum_size, gint *natural_size)
+{
 	CustomCellRendererColor *cellcolor = CUSTOM_CELL_RENDERER_COLOR (cell);
+	*minimum_size = 1;
+	*natural_size = cellcolor->height;
+}
 
-	/*GtkStateType state;
-	gint width, height;
-	gint x_offset, y_offset;
-
-	custom_cell_renderer_color_get_size(cell, widget, cell_area, &x_offset, &y_offset, &width, &height);
-
-	if (GTK_WIDGET_HAS_FOCUS(widget))
-		state = GTK_STATE_ACTIVE;
-	else
-		state = GTK_STATE_NORMAL;
-
-	width -= cell->xpad * 2;
-	height -= cell->ypad * 2;*/
-
-	cairo_t *cr;
-	cr = gdk_cairo_create(window);
-	cairo_rectangle(cr, expose_area->x, expose_area->y, expose_area->width, expose_area->height);
-	cairo_clip(cr);
-
-	cairo_rectangle(cr, expose_area->x, expose_area->y, expose_area->width, expose_area->height);
+static void custom_cell_renderer_color_render(GtkCellRenderer *cell, cairo_t *cr, GtkWidget *widget, const GdkRectangle *background_area, const GdkRectangle *cell_area, GtkCellRendererState flags){
+	CustomCellRendererColor *cellcolor = CUSTOM_CELL_RENDERER_COLOR (cell);
+	cairo_rectangle(cr, cell_area->x, cell_area->y, cell_area->width, cell_area->height);
 	Color c;
 	color_object_get_color(cellcolor->color, &c);
 	cairo_set_source_rgb(cr, c.rgb.red, c.rgb.green, c.rgb.blue);
 	cairo_fill(cr);
-
-	cairo_destroy(cr);
-
-	/*
-	gtk_paint_box(widget->style, window, GTK_STATE_NORMAL, GTK_SHADOW_IN, NULL, widget, "trough", cell_area->x + x_offset + cell->xpad, cell_area->y + y_offset
-			+ cell->ypad, width - 1, height - 1);
-
-
-
-	 gtk_paint_box (widget->style,
-	 window,
-	 state, GTK_SHADOW_OUT,
-	 NULL, widget, "bar",
-	 cell_area->x + x_offset + cell->xpad,
-	 cell_area->y + y_offset + cell->ypad,
-	 width * 0.5,
-	 height - 1);
-	 */
 }
 

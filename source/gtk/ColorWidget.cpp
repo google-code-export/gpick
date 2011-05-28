@@ -25,7 +25,7 @@
 
 G_DEFINE_TYPE (GtkColor, gtk_color, GTK_TYPE_DRAWING_AREA);
 
-static gboolean gtk_color_expose(GtkWidget *widget, GdkEventExpose *event);
+static gboolean gtk_color_draw(GtkWidget *widget, cairo_t *cr);
 static gboolean gtk_color_button_release(GtkWidget *widget, GdkEventButton *event);
 static gboolean gtk_color_button_press(GtkWidget *widget, GdkEventButton *event);
 static void gtk_color_size_request (GtkWidget *widget, GtkRequisition *requisition);
@@ -52,6 +52,7 @@ typedef struct GtkColorPrivate {
 	bool secondary_color;
 
 	double roundness;
+	double padding;
 } GtkColorPrivate;
 
 static void gtk_color_class_init(GtkColorClass *color_class) {
@@ -63,10 +64,10 @@ static void gtk_color_class_init(GtkColorClass *color_class) {
 	obj_class = G_OBJECT_CLASS(color_class);
 	widget_class = GTK_WIDGET_CLASS(color_class);
 
-	widget_class->expose_event = gtk_color_expose;
+	widget_class->draw = gtk_color_draw;
 	widget_class->button_release_event = gtk_color_button_release;
 	widget_class->button_press_event = gtk_color_button_press;
-	widget_class->size_request = gtk_color_size_request;
+	//widget_class->size_request = gtk_color_size_request;
 
 	obj_class->finalize = gtk_color_finalize;
 
@@ -84,7 +85,7 @@ GtkWidget* gtk_color_new(void) {
 	GtkWidget* widget = (GtkWidget*) g_object_new(GTK_TYPE_COLOR, NULL);
 	GtkColorPrivate *ns = GTK_COLOR_GET_PRIVATE(widget);
 
-	//gtk_widget_set_size_request(GTK_WIDGET(widget), 16+widget->style->xthickness*2, 16+widget->style->ythickness*2);
+	gtk_widget_set_size_request(GTK_WIDGET(widget), 16, 16);
 
 	color_set(&ns->color, 0);
 	ns->text = 0;
@@ -92,12 +93,14 @@ GtkWidget* gtk_color_new(void) {
 	ns->h_center = false;
 	ns->secondary_color = false;
 	ns->roundness = 20;
+	ns->padding = 2;
 
-	GTK_WIDGET_SET_FLAGS(widget, GTK_CAN_FOCUS);
+	gtk_widget_set_can_focus(widget, true);
 
 	return widget;
 }
 
+/*
 static void gtk_color_size_request (GtkWidget *widget, GtkRequisition *requisition){
 	GtkColorPrivate *ns = GTK_COLOR_GET_PRIVATE(widget);
 
@@ -112,6 +115,7 @@ static void gtk_color_size_request (GtkWidget *widget, GtkRequisition *requisiti
 	requisition->width = width;
 	requisition->height = height;
 }
+*/
 
 static void gtk_color_finalize(GObject *color_obj){
 
@@ -139,8 +143,8 @@ void gtk_color_set_roundness(GtkColor* widget, double roundness){
 	GtkColorPrivate *ns = GTK_COLOR_GET_PRIVATE(widget);
 	ns->roundness = roundness;
 
-	gint width = 32 + GTK_WIDGET(widget)->style->xthickness * 2;
-	gint height = 16 + GTK_WIDGET(widget)->style->ythickness * 2;
+	gint width = 32 + ns->padding * 2;
+	gint height = 16 + ns->padding * 2;
 
 	if (ns->rounded_rectangle){
 		width += ns->roundness;
@@ -202,35 +206,31 @@ static void cairo_rounded_rectangle(cairo_t *cr, double x, double y, double widt
 
 }
 
-static gboolean gtk_color_expose(GtkWidget *widget, GdkEventExpose *event) {
+static gboolean gtk_color_draw(GtkWidget *widget, cairo_t *cr) {
 
 	GtkStateType state;
 
-	if (GTK_WIDGET_HAS_FOCUS (widget))
+	if (gtk_widget_has_focus(widget))
 		state = GTK_STATE_SELECTED;
 	else
 		state = GTK_STATE_ACTIVE;
 
-
-	cairo_t *cr;
-
 	GtkColorPrivate *ns = GTK_COLOR_GET_PRIVATE(widget);
 
-	cr = gdk_cairo_create(widget->window);
-
-	cairo_rectangle(cr, event->area.x, event->area.y, event->area.width, event->area.height);
-	cairo_clip(cr);
+	GtkAllocation allocation;
+	gtk_widget_get_allocation(widget, &allocation);
 
 	if (ns->rounded_rectangle){
 
-		cairo_rounded_rectangle(cr, widget->style->xthickness, widget->style->ythickness,
-			widget->allocation.width-widget->style->xthickness*2, widget->allocation.height-widget->style->ythickness*2, ns->roundness);
+		cairo_rounded_rectangle(cr, ns->padding, ns->padding,
+			allocation.width - ns->padding * 2, allocation.height - ns->padding * 2, ns->roundness);
 
 		cairo_set_source_rgb(cr, ns->color.rgb.red, ns->color.rgb.green, ns->color.rgb.blue);
 		cairo_fill_preserve(cr);
 
-		if (GTK_WIDGET_HAS_FOCUS(widget)){
-			cairo_set_source_rgb(cr, widget->style->fg[GTK_STATE_NORMAL].red/65536.0, widget->style->fg[GTK_STATE_NORMAL].green/65536.0, widget->style->fg[GTK_STATE_NORMAL].blue/65536.0);
+		if (gtk_widget_has_focus(widget)){
+			//cairo_set_source_rgb(cr, widget->style->fg[GTK_STATE_NORMAL].red/65536.0, widget->style->fg[GTK_STATE_NORMAL].green/65536.0, widget->style->fg[GTK_STATE_NORMAL].blue/65536.0);
+			cairo_set_source_rgb(cr, 1, 1, 1);
 			cairo_set_line_width(cr, 3);
 		}else{
 			cairo_set_source_rgb(cr, 0, 0, 0);
@@ -240,7 +240,7 @@ static gboolean gtk_color_expose(GtkWidget *widget, GdkEventExpose *event) {
 		cairo_stroke(cr);
 
 	}else{
-		cairo_rectangle(cr, event->area.x, event->area.y, event->area.width, event->area.height);
+		cairo_rectangle(cr, 0, 0, allocation.width, allocation.height);
 		cairo_set_source_rgb(cr, ns->color.rgb.red, ns->color.rgb.green, ns->color.rgb.blue);
 		cairo_fill(cr);
 	}
@@ -261,12 +261,12 @@ static gboolean gtk_color_expose(GtkWidget *widget, GdkEventExpose *event) {
 		cairo_set_source_rgb(cr, ns->text_color.rgb.red, ns->text_color.rgb.green, ns->text_color.rgb.blue);
 
 		pango_layout_set_markup(layout, ns->text, -1);
-		pango_layout_set_width(layout, (widget->allocation.width - widget->style->xthickness * 2) * PANGO_SCALE);
-		pango_layout_set_height(layout, (widget->allocation.height - widget->style->ythickness * 2) * PANGO_SCALE);
+		pango_layout_set_width(layout, (allocation.width /*- widget->style->xthickness * 2*/) * PANGO_SCALE);
+		pango_layout_set_height(layout, (allocation.height /*- widget->style->ythickness * 2*/) * PANGO_SCALE);
 
 		int width, height;
 		pango_layout_get_pixel_size(layout, &width, &height);
-		cairo_move_to(cr, widget->style->xthickness, widget->style->ythickness + (widget->allocation.height - height) / 2);
+		cairo_move_to(cr, 0 /*widget->style->xthickness*/, /*widget->style->ythickness +*/ (allocation.height - height) / 2);
 
 		if (ns->h_center)
 			pango_layout_set_alignment(layout, PANGO_ALIGN_CENTER);
@@ -281,9 +281,6 @@ static gboolean gtk_color_expose(GtkWidget *widget, GdkEventExpose *event) {
 		pango_font_description_free (font_description);
 
 	}
-
-	cairo_destroy(cr);
-
 
 	return FALSE;
 }

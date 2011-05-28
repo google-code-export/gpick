@@ -92,17 +92,18 @@ void sampler_set_oversample(struct Sampler *sampler, int oversample){
 	sampler->oversample = oversample;
 }
 
-static void get_pixel(GdkPixbuf *pixbuf, int x, int y, Color* color){
-	int rowstride;
-	guchar *pixels, *p;
+static void get_pixel(cairo_surface_t *surface, int x, int y, Color* color){
+	unsigned char *data = cairo_image_surface_get_data(surface);
+	int width = cairo_image_surface_get_width(surface);
+	int height = cairo_image_surface_get_height(surface);
+	int stride = cairo_image_surface_get_stride(surface);
+	unsigned char *p;
 
-	rowstride = gdk_pixbuf_get_rowstride(pixbuf);
-	pixels = gdk_pixbuf_get_pixels(pixbuf);
-	p = pixels + y * rowstride + x * 3;
+	p = data + y * stride + x * 4;
 
-	color->rgb.red = p[0]/255.0;
+	color->rgb.red = p[2]/255.0;
 	color->rgb.green = p[1]/255.0;
-	color->rgb.blue = p[2]/255.0;
+	color->rgb.blue = p[0]/255.0;
 }
 
 
@@ -113,7 +114,7 @@ int sampler_get_color_sample(struct Sampler *sampler, Vec2<int>& pointer, Vec2<i
 
 	color_zero(&result);
 
-	GdkPixbuf* pixbuf = screen_reader_get_pixbuf(sampler->screen_reader);
+	cairo_surface_t *surface = screen_reader_get_surface(sampler->screen_reader);
 
 	int x = pointer.x, y = pointer.y;
 	int width = screen_size.x, height = screen_size.y;
@@ -139,7 +140,7 @@ int sampler_get_color_sample(struct Sampler *sampler, Vec2<int>& pointer, Vec2<i
 			if ((center_x+x<0) || (center_y+y<0)) continue;
 			if ((center_x+x>=width) || (center_y+y>=height)) continue;
 
-			get_pixel(pixbuf, offset.x + center_x+x, offset.y + center_y+y, &sample);
+			get_pixel(surface, offset.x + center_x+x, offset.y + center_y+y, &sample);
 
 			float f;
 			if (sampler->oversample){

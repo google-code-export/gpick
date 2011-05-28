@@ -31,7 +31,7 @@ using namespace std;
 G_DEFINE_TYPE (GtkRange2D, gtk_range_2d, GTK_TYPE_DRAWING_AREA);
 static GtkWindowClass *parent_class = NULL;
 
-static gboolean gtk_range_2d_expose(GtkWidget *range_2d, GdkEventExpose *event);
+static gboolean gtk_range_2d_draw(GtkWidget *range_2d, cairo_t *cr);
 static gboolean gtk_range_2d_button_release(GtkWidget *range_2d, GdkEventButton *event);
 static gboolean gtk_range_2d_button_press(GtkWidget *range_2d, GdkEventButton *event);
 static gboolean gtk_range_2d_motion_notify(GtkWidget *widget, GdkEventMotion *event);
@@ -77,7 +77,7 @@ static void gtk_range_2d_class_init(GtkRange2DClass *range_2d_class) {
 
 	/* GtkWidget signals */
 
-	widget_class->expose_event = gtk_range_2d_expose;
+	widget_class->draw = gtk_range_2d_draw;
 	widget_class->button_release_event = gtk_range_2d_button_release;
 	widget_class->button_press_event = gtk_range_2d_button_press;
 
@@ -106,11 +106,11 @@ GtkWidget* gtk_range_2d_new(){
 	ns->xname = 0;
 	ns->yname = 0;
 
-	gtk_widget_set_size_request(GTK_WIDGET(widget), ns->block_size + widget->style->xthickness * 2, ns->block_size + widget->style->ythickness * 2);
+	gtk_widget_set_size_request(GTK_WIDGET(widget), ns->block_size/* + widget->style->xthickness * 2*/, ns->block_size /*+ widget->style->ythickness * 2*/);
 
 	ns->cache_range_2d = 0;
 
-	GTK_WIDGET_SET_FLAGS(widget, GTK_CAN_FOCUS);
+	gtk_widget_set_can_focus(widget, true);
 	return widget;
 }
 
@@ -205,8 +205,8 @@ static gboolean gtk_range_2d_motion_notify(GtkWidget *widget, GdkEventMotion *ev
 
 	if (ns->grab_block){
 
-		double dx = (event->x - widget->style->xthickness);
-		double dy = (event->y - widget->style->ythickness);
+		double dx = (event->x /*- widget->style->xthickness*/);
+		double dy = (event->y /*- widget->style->ythickness*/);
 
 		ns->x = clamp_float(dx / ns->block_size, 0, 1);
 		ns->y = clamp_float(dy / ns->block_size, 0, 1);
@@ -220,7 +220,9 @@ static gboolean gtk_range_2d_motion_notify(GtkWidget *widget, GdkEventMotion *ev
 	return false;
 }
 
-static gboolean gtk_range_2d_expose(GtkWidget *widget, GdkEventExpose *event){
+static gboolean gtk_range_2d_draw(GtkWidget *widget, cairo_t *cr){
+
+#if 0
 
 	GtkStateType state;
 
@@ -229,20 +231,14 @@ static gboolean gtk_range_2d_expose(GtkWidget *widget, GdkEventExpose *event){
 	else
 		state = GTK_STATE_ACTIVE;
 
-	cairo_t *cr;
-
 	GtkRange2DPrivate *ns = GTK_RANGE_2D_GET_PRIVATE(widget);
 
 /*	if (GTK_WIDGET_HAS_FOCUS(widget)){
 		gtk_paint_focus(widget->style, widget->window, state, &event->area, widget, 0, widget->style->xthickness, widget->style->ythickness, 150, 150);
 	}*/
 
-	cr = gdk_cairo_create(widget->window);
 
-	cairo_rectangle(cr, event->area.x, event->area.y, event->area.width, event->area.height);
-	cairo_clip(cr);
-
-	cairo_translate(cr, widget->style->xthickness, widget->style->ythickness);
+	//cairo_translate(cr, widget->style->xthickness, widget->style->ythickness);
 
 
 	draw_sat_val_block(ns, cr, 0, 0, ns->block_size);
@@ -264,8 +260,8 @@ static gboolean gtk_range_2d_expose(GtkWidget *widget, GdkEventExpose *event){
 		cairo_set_source_rgb(cr, 1, 1, 1);
 
 		pango_layout_set_text(layout, ns->xname, -1);
-		pango_layout_set_width(layout, (widget->allocation.width - widget->style->xthickness * 2) * PANGO_SCALE);
-		pango_layout_set_height(layout, (widget->allocation.height - widget->style->ythickness * 2) * PANGO_SCALE);
+		pango_layout_set_width(layout, (widget->allocation.width /*- widget->style->xthickness * 2*/) * PANGO_SCALE);
+		pango_layout_set_height(layout, (widget->allocation.height /*- widget->style->ythickness * 2*/) * PANGO_SCALE);
 		pango_layout_set_alignment(layout, PANGO_ALIGN_CENTER);
 		pango_cairo_update_layout(cr, layout);
 
@@ -294,7 +290,7 @@ static gboolean gtk_range_2d_expose(GtkWidget *widget, GdkEventExpose *event){
 		pango_font_description_free (font_description);
 	}
 
-	cairo_destroy(cr);
+#endif
 
 	return FALSE;
 }
@@ -312,10 +308,10 @@ static gboolean gtk_range_2d_button_press(GtkWidget *widget, GdkEventButton *eve
 
 		GdkCursor *cursor = gdk_cursor_new(GDK_CROSS);
 		gdk_pointer_grab(gtk_widget_get_window(widget), false, GdkEventMask(GDK_POINTER_MOTION_MASK | GDK_BUTTON_RELEASE_MASK), NULL, cursor, GDK_CURRENT_TIME);
-		gdk_cursor_destroy(cursor);
+		gdk_cursor_unref(cursor);
 
-		double dx = (event->x - widget->style->xthickness);
-		double dy = (event->y - widget->style->ythickness);
+		double dx = (event->x/* - widget->style->xthickness*/);
+		double dy = (event->y/* - widget->style->ythickness*/);
 
 		ns->x = clamp_float(dx / ns->block_size, 0, 1);
 		ns->y = clamp_float(dy / ns->block_size, 0, 1);
