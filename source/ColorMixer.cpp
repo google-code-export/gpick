@@ -381,7 +381,7 @@ static gboolean on_color_key_press (GtkWidget *widget, GdkEventKey *event, Color
 	GtkWidget* color_widget = widget;
 
 	switch(event->keyval){
-		case GDK_c:
+		case GDK_KEY_c:
 			if ((event->state&modifiers)==GDK_CONTROL_MASK){
 
 				gtk_color_get_color(GTK_COLOR(color_widget), &c);
@@ -400,7 +400,7 @@ static gboolean on_color_key_press (GtkWidget *widget, GdkEventKey *event, Color
 			return false;
 			break;
 
-		case GDK_v:
+		case GDK_KEY_v:
 			if ((event->state&modifiers)==GDK_CONTROL_MASK){
 				if (copypaste_get_color_object(&color_object, args->gs)==0){
 					set_rgb_color_by_widget(args, color_object, color_widget);
@@ -606,7 +606,7 @@ static ColorSource* source_implement(ColorSource *source, GlobalState *gs, struc
 				gtk_drag_dest_set( widget, GtkDestDefaults(GTK_DEST_DEFAULT_MOTION | GTK_DEST_DEFAULT_HIGHLIGHT), 0, 0, GDK_ACTION_COPY);
 				gtk_drag_source_set( widget, GDK_BUTTON1_MASK, 0, 0, GDK_ACTION_COPY);
 				dd.handler_map = dynv_system_get_handler_map(gs->colors->params);
-				dd.userdata2 = (void*)i;
+				dd.userdata2 = (void*)(uintptr_t)i;
 				dragdrop_widget_attach(widget, DragDropFlags(DRAGDROP_SOURCE | DRAGDROP_DESTINATION), &dd);
 
 			}else{
@@ -614,7 +614,7 @@ static ColorSource* source_implement(ColorSource *source, GlobalState *gs, struc
 
 				gtk_drag_source_set( widget, GDK_BUTTON1_MASK, 0, 0, GDK_ACTION_COPY);
 				dd.handler_map = dynv_system_get_handler_map(gs->colors->params);
-				dd.userdata2 = (void*)i;
+				dd.userdata2 = (void*)(uintptr_t)i;
 				dragdrop_widget_attach(widget, DragDropFlags(DRAGDROP_SOURCE), &dd);
 			}
 		}

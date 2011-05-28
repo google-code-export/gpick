@@ -56,7 +56,7 @@ if not env.GetOption('clean'):
 	conf = Configure(env)
 
 	libs = {
-		'GTK_PC': 			{'checks':{'gtk+-2.0':'>= 2.12.0'}},
+		'GTK_PC': 			{'checks':{'gtk+-3.0':'>= 3.0'}},
 	}
 
 	if not env['INTERNAL_LUA']:

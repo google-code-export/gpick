@@ -130,7 +130,7 @@ int copypaste_get_color_object(struct ColorObject** out_color_object, GlobalStat
 						case TARGET_COLOR_OBJECT:
 							{
 								struct ColorObject* color_object;
-								memcpy(&color_object, selection_data->data, sizeof(struct ColorObject*));
+								memcpy(&color_object, gtk_selection_data_get_data(selection_data), sizeof(struct ColorObject*));
 								*out_color_object = color_object;
 								success = true;
 							}
@@ -138,11 +138,11 @@ int copypaste_get_color_object(struct ColorObject** out_color_object, GlobalStat
 
 						case TARGET_STRING:
 							{
-								gchar* data = (gchar*)selection_data->data;
-								if (data[selection_data->length]!=0) break;	//not null terminated
+								const guchar* data = gtk_selection_data_get_data(selection_data);
+								if (data[gtk_selection_data_get_length(selection_data) - 1] != 0) break;	//not null terminated
 
 								struct ColorObject* color_object;
-								if (main_get_color_object_from_text(gs, data, &color_object)==0){
+								if (main_get_color_object_from_text(gs, (char*)data, &color_object)==0){
 									*out_color_object = color_object;
 									success = true;
 								}
@@ -151,7 +151,7 @@ int copypaste_get_color_object(struct ColorObject** out_color_object, GlobalStat
 
 						case TARGET_COLOR:
 							{
-								guint16* data = (guint16*)selection_data->data;
+								guint16* data = (guint16*)gtk_selection_data_get_data(selection_data);
 
 								Color color;
 

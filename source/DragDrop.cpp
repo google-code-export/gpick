@@ -118,7 +118,7 @@ int dragdrop_widget_attach(GtkWidget* widget, DragDropFlags flags, struct DragDr
 static void drag_data_received(GtkWidget *widget, GdkDragContext *context, gint x, gint y, GtkSelectionData *selection_data, guint target_type, guint time, gpointer user_data){
 	bool success = false;
 
-	if ((selection_data != NULL) && (selection_data->length >= 0)){
+	if ((selection_data != NULL) && (gtk_selection_data_get_length(selection_data) >= 0)){
 
 		struct DragDrop *dd = (struct DragDrop*)user_data;
 
@@ -135,20 +135,20 @@ static void drag_data_received(GtkWidget *widget, GdkDragContext *context, gint 
 					struct ColorObject* color_object;
 				}data;
 
-				memcpy(&data, selection_data->data, sizeof(data));
+				memcpy(&data, gtk_selection_data_get_data(selection_data), sizeof(data));
 
 				if (data.color_object_n > 1){
 					struct ColorObject **color_objects = new struct ColorObject*[data.color_object_n];
-					memcpy(color_objects, selection_data->data + offsetof(ColorList, color_object), sizeof(struct ColorObject*) * data.color_object_n);
+					memcpy(color_objects, gtk_selection_data_get_data(selection_data) + offsetof(ColorList, color_object), sizeof(struct ColorObject*) * data.color_object_n);
 
 					if (dd->set_color_object_list_at)
-						dd->set_color_object_list_at(dd, color_objects, data.color_object_n, x, y, context->action & GDK_ACTION_MOVE );
+						dd->set_color_object_list_at(dd, color_objects, data.color_object_n, x, y, gdk_drag_context_get_actions(context) & GDK_ACTION_MOVE );
 					else if (dd->set_color_object_at)
-						dd->set_color_object_at(dd, data.color_object, x, y, context->action & GDK_ACTION_MOVE );
+						dd->set_color_object_at(dd, data.color_object, x, y, gdk_drag_context_get_actions(context) & GDK_ACTION_MOVE );
 
 				}else{
 					if (dd->set_color_object_at)
-						dd->set_color_object_at(dd, data.color_object, x, y, context->action & GDK_ACTION_MOVE );
+						dd->set_color_object_at(dd, data.color_object, x, y, gdk_drag_context_get_actions(context) & GDK_ACTION_MOVE );
 				}
 
 			}
@@ -157,19 +157,19 @@ static void drag_data_received(GtkWidget *widget, GdkDragContext *context, gint 
 
 		case TARGET_STRING:
 			{
-				gchar* data = (gchar*)selection_data->data;
-				if (data[selection_data->length]!=0) break;	//not null terminated
+				const guchar* data = gtk_selection_data_get_data(selection_data);
+				if (data[gtk_selection_data_get_length(selection_data) - 1] != 0) break; //not null terminated
 
 				Color color;
 
-				if (main_get_color_from_text(dd->gs, data, &color)!=0){
+				if (main_get_color_from_text(dd->gs, (char*)data, &color)!=0){
 					gtk_drag_finish (context, false, false, time);
 					return;
 				}
 
 				struct ColorObject* color_object = color_object_new(dd->handler_map);
 				color_object_set_color(color_object, &color);
-				dd->set_color_object_at(dd, color_object, x, y, context->action & GDK_ACTION_MOVE );
+				dd->set_color_object_at(dd, color_object, x, y, gdk_drag_context_get_actions(context) & GDK_ACTION_MOVE );
 				color_object_release(color_object);
 			}
 			success = true;
@@ -177,7 +177,7 @@ static void drag_data_received(GtkWidget *widget, GdkDragContext *context, gint 
 
 		case TARGET_COLOR:
 			{
-				guint16* data = (guint16*)selection_data->data;
+				guint16* data = (guint16*)gtk_selection_data_get_data(selection_data);
 
 				Color color;
 
@@ -187,7 +187,7 @@ static void drag_data_received(GtkWidget *widget, GdkDragContext *context, gint 
 
 				struct ColorObject* color_object = color_object_new(dd->handler_map);
 				color_object_set_color(color_object, &color);
-				dd->set_color_object_at(dd, color_object, x, y, context->action & GDK_ACTION_MOVE );
+				dd->set_color_object_at(dd, color_object, x, y, gdk_drag_context_get_actions(context) & GDK_ACTION_MOVE );
 				color_object_release(color_object);
 			}
 			success = true;
@@ -199,7 +199,7 @@ static void drag_data_received(GtkWidget *widget, GdkDragContext *context, gint 
 
 	}
 
-	gtk_drag_finish (context, success, (context->action==GDK_ACTION_MOVE), time);
+	gtk_drag_finish (context, success, gdk_drag_context_get_actions(context) & GDK_ACTION_MOVE, time);
 }
 
 
@@ -210,7 +210,7 @@ static gboolean drag_motion(GtkWidget *widget, GdkDragContext *context, gint x, 
 	if (!dd->test_at){
 		GdkAtom target = gtk_drag_dest_find_target(widget, context, 0);
 		if (target){
-			gdk_drag_status(context, context->action, time);
+			gdk_drag_status(context, gdk_drag_context_get_actions(context), time);
 		}else{
 			gdk_drag_status(context, GdkDragAction(0), time);
 		}
@@ -220,7 +220,7 @@ static gboolean drag_motion(GtkWidget *widget, GdkDragContext *context, gint x, 
 	if (dd->test_at(dd, x, y)){
 		GdkAtom target = gtk_drag_dest_find_target(widget, context, 0);
 		if (target){
-			gdk_drag_status(context, context->action, time);
+			gdk_drag_status(context, gdk_drag_context_get_actions(context), time);
 		}else{
 			gdk_drag_status(context, GdkDragAction(0), time);
 		}
@@ -416,7 +416,7 @@ static void drag_begin(GtkWidget *widget, GdkDragContext *context, gpointer user
 			gtk_container_add(GTK_CONTAINER(dragwindow), hbox);
 			gtk_window_resize(GTK_WINDOW(dragwindow), 164, 24 * std::min(color_object_n, (uint32_t)5));
 
-			for (int i = 0; i < std::min(color_object_n, (uint32_t)5); i++){
+			for (uint32_t i = 0; i < std::min(color_object_n, (uint32_t)5); i++){
 				Color color;
 				color_object_get_color(color_objects[i], &color);
 

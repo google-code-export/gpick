@@ -25,7 +25,7 @@
 
 G_DEFINE_TYPE (GtkSwatch, gtk_swatch, GTK_TYPE_DRAWING_AREA);
 
-static gboolean gtk_swatch_expose(GtkWidget *swatch, GdkEventExpose *event);
+static gboolean gtk_swatch_draw(GtkWidget *swatch, cairo_t *cr);
 static gboolean gtk_swatch_button_release(GtkWidget *swatch, GdkEventButton *event);
 static gboolean gtk_swatch_button_press(GtkWidget *swatch, GdkEventButton *event);
 
@@ -53,7 +53,7 @@ static void gtk_swatch_class_init(GtkSwatchClass *swatch_class) {
 
 	/* GtkWidget signals */
 
-	widget_class->expose_event = gtk_swatch_expose;
+	widget_class->draw = gtk_swatch_draw;
 	widget_class->button_release_event = gtk_swatch_button_release;
 	widget_class->button_press_event = gtk_swatch_button_press;
 
@@ -86,13 +86,13 @@ gtk_swatch_new(void) {
 	GtkWidget* widget = (GtkWidget*) g_object_new(GTK_TYPE_SWATCH, NULL);
 	GtkSwatchPrivate *ns = GTK_SWATCH_GET_PRIVATE(widget);
 
-	gtk_widget_set_size_request(GTK_WIDGET(widget),150+widget->style->xthickness*2,150+widget->style->ythickness*2);
+	gtk_widget_set_size_request(GTK_WIDGET(widget),150/*+widget->style->xthickness*2*/,150/*+widget->style->ythickness*2*/);
 
 	for (gint32 i = 0; i < 7; ++i)
 		color_set(&ns->color[i], i/7.0);
 	ns->current_color = 1;
 
-	GTK_WIDGET_SET_FLAGS(widget, GTK_CAN_FOCUS);
+	gtk_widget_set_can_focus(widget, true);
 	return widget;
 }
 
@@ -178,7 +178,7 @@ void gtk_swatch_set_main_color(GtkSwatch* swatch, guint index, Color* color) {
 }
 
 gint gtk_swatch_get_color_at(GtkSwatch* swatch, gint x, gint y) {
-	return swatch_get_color_by_position(x-GTK_WIDGET(swatch)->style->xthickness, y-GTK_WIDGET(swatch)->style->ythickness);
+	return swatch_get_color_by_position(x/*-GTK_WIDGET(swatch)->style->xthickness*/, y/*-GTK_WIDGET(swatch)->style->ythickness*/);
 }
 
 static void gtk_swatch_draw_hexagon(cairo_t *cr, float x, float y, float radius) {
@@ -189,37 +189,29 @@ static void gtk_swatch_draw_hexagon(cairo_t *cr, float x, float y, float radius)
 	cairo_close_path(cr);
 }
 
-static gboolean gtk_swatch_expose(GtkWidget *widget, GdkEventExpose *event) {
+static gboolean gtk_swatch_draw(GtkWidget *widget, cairo_t *cr) {
 
 	GtkStateType state;
 
-	if (GTK_WIDGET_HAS_FOCUS (widget))
+	if (gtk_widget_has_focus(widget))
 		state = GTK_STATE_SELECTED;
 	else
 		state = GTK_STATE_ACTIVE;
-
-
-	cairo_t *cr;
 
 	GtkSwatchPrivate *ns = GTK_SWATCH_GET_PRIVATE(widget);
 
 	//gtk_paint_shadow(widget->style, widget->window, state, GTK_SHADOW_IN, &event->area, widget, 0, widget->style->xthickness, widget->style->ythickness, 150, 150);
 
-	if (GTK_WIDGET_HAS_FOCUS(widget)){
-		gtk_paint_focus(widget->style, widget->window, state, &event->area, widget, 0, widget->style->xthickness, widget->style->ythickness, 150, 150);
+	if (gtk_widget_has_focus(widget)){
+		//gtk_paint_focus(widget->style, widget->window, state, &event->area, widget, 0, 0/*widget->style->xthickness*/, 0/*widget->style->ythickness*/, 150, 150);
 	}
-
-	cr = gdk_cairo_create(widget->window);
-
-	cairo_rectangle(cr, event->area.x, event->area.y, event->area.width, event->area.height);
-	cairo_clip(cr);
 
 	cairo_select_font_face(cr, "monospace", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
 	cairo_set_font_size(cr, 12);
 
 	cairo_matrix_t matrix;
 	cairo_get_matrix(cr, &matrix);
-	cairo_translate(cr, 75+widget->style->xthickness, 75+widget->style->ythickness);
+	cairo_translate(cr, 75, 75);
 
 	int edges = 6;
 
@@ -280,9 +272,6 @@ static gboolean gtk_swatch_expose(GtkWidget *widget, GdkEventExpose *event) {
 
 	cairo_set_matrix(cr, &matrix);
 
-	cairo_destroy(cr);
-
-
 
 	return FALSE;
 }
@@ -317,7 +306,7 @@ static int swatch_get_color_by_position(gint x, gint y){
 static gboolean gtk_swatch_button_press(GtkWidget *widget, GdkEventButton *event) {
 	GtkSwatchPrivate *ns = GTK_SWATCH_GET_PRIVATE(widget);
 
-	int new_color = swatch_get_color_by_position(event->x - widget->style->xthickness, event->y - widget->style->ythickness);
+	int new_color = swatch_get_color_by_position(event->x /*- widget->style->xthickness*/, event->y /*- widget->style->ythickness*/);
 
 	gtk_widget_grab_focus(widget);
 

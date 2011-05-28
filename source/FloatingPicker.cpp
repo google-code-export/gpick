@@ -74,7 +74,7 @@ static void get_color_sample(FloatingPickerArgs *args, bool updateWidgets, Color
 		screen_reader_add_rect(args->gs->screen_reader, screen, zoomed_rect);
 	}
 
-	screen_reader_update_pixbuf(args->gs->screen_reader, &final_rect);
+	screen_reader_update_surface(args->gs->screen_reader, &final_rect);
 
 	Vec2<int> offset;
 
@@ -83,7 +83,7 @@ static void get_color_sample(FloatingPickerArgs *args, bool updateWidgets, Color
 
 	if (updateWidgets){
 		offset = Vec2<int>(zoomed_rect.getX()-final_rect.getX(), zoomed_rect.getY()-final_rect.getY());
-		gtk_zoomed_update(GTK_ZOOMED(args->zoomed), pointer, window_size, offset, screen_reader_get_pixbuf(args->gs->screen_reader));
+		gtk_zoomed_update(GTK_ZOOMED(args->zoomed), pointer, window_size, offset, screen_reader_get_surface(args->gs->screen_reader));
 	}
 }
 
@@ -164,13 +164,13 @@ void floating_picker_activate(FloatingPickerArgs *args, bool hide_on_mouse_relea
 
 	//gdk_window_set_cursor(si->fake_window->window, cursor);
 
-	gdk_pointer_grab(args->window->window, false, GdkEventMask(GDK_POINTER_MOTION_MASK | GDK_BUTTON_RELEASE_MASK | GDK_BUTTON_PRESS_MASK	), NULL, cursor, GDK_CURRENT_TIME);
-	gdk_keyboard_grab(args->window->window, false, GDK_CURRENT_TIME);
+	gdk_pointer_grab(gtk_widget_get_window(args->window), false, GdkEventMask(GDK_POINTER_MOTION_MASK | GDK_BUTTON_RELEASE_MASK | GDK_BUTTON_PRESS_MASK	), NULL, cursor, GDK_CURRENT_TIME);
+	gdk_keyboard_grab(gtk_widget_get_window(args->window), false, GDK_CURRENT_TIME);
 
 	float refresh_rate = dynv_get_float_wd(args->gs->params, "gpick.picker.refresh_rate", 30);
 	args->timeout_source_id = g_timeout_add_full(G_PRIORITY_DEFAULT_IDLE, 1000/refresh_rate, (GSourceFunc)update_display, args, (GDestroyNotify)NULL);
 
-	gdk_cursor_destroy(cursor);
+	gdk_cursor_unref(cursor);
 
 #endif
 
@@ -247,7 +247,7 @@ static gboolean key_up_cb (GtkWidget *widget, GdkEventKey *event, FloatingPicker
 	GdkEventButton event2;
 
 	switch(event->keyval){
-	case GDK_Escape:
+	case GDK_KEY_Escape:
 		event2.type = GDK_BUTTON_RELEASE;
 		event2.button = 1;
 		args->release_mode = false;
