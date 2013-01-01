@@ -1,0 +1,17 @@
+syntax: glob
+.*
+*~
+*.orig
+*.diff
+diff
+*.save
+*.old
+*.bak
+.*.swp
+*.out
+*.pyc
+*.log
+*.mo
+user-config.py
+build
+tags
